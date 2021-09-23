@@ -1,0 +1,46 @@
+- defaultTab: nodes
+  description: ''
+  executionEnabled: true
+  id: 1113219d-3947-4738-b2a1-fe629550b7c2
+  loglevel: INFO
+  name: Create Grafana container
+  nodeFilterEditable: false
+  nodefilters:
+    dispatch:
+      excludePrecedence: true
+      keepgoing: false
+      rankOrder: ascending
+      successOnEmptyNodeFilter: false
+      threadcount: '1'
+    filter: 'tags: docker'
+    filterExclude: 'tags: centos'
+  nodesSelectedByDefault: true
+  plugins:
+    ExecutionLifecycle: null
+  scheduleEnabled: true
+  sequence:
+    commands:
+    - exec: sudo apt install python3
+    - configuration:
+        ansible-become: 'true'
+        ansible-become-method: sudo
+        ansible-playbook-inline: "---\n- hosts: 172.27.11.100\n  tasks:\n    - name:\
+          \ Instalando algumas dependencias\n      apt:\n        name: \"{{ item }}\"\
+          \n      loop:\n        - curl\n        - python3\n        - python3-pip\n\
+          \        \n    - name: Instalando pacote Docker\n      pip:\n        name:\
+          \ docker\n        executable: pip3\n        \n    - name: Garantindo imagem\n\
+          \      docker_image:\n        name: \"grafana/grafana\"\n    \n    - name:\
+          \ Subindo container do grafana\n      docker_container:\n        name: grafana\n\
+          \        image: grafana/grafana\n        detach: yes\n        ports:\n \
+          \         - \"3000:3000\"\n        "
+        ansible-ssh-auth-type: privateKey
+        ansible-ssh-key-storage-path: keys/rundeck
+        ansible-ssh-passphrase-option: option.password
+        ansible-ssh-use-agent: 'false'
+        ansible-ssh-user: rundeck
+      nodeStep: true
+      type: com.batix.rundeck.plugins.AnsiblePlaybookInlineWorkflowNodeStep
+    keepgoing: false
+    strategy: node-first
+  uuid: 1113219d-3947-4738-b2a1-fe629550b7c2
+
