@@ -12,6 +12,8 @@
   Contém o arquivos criados na aula.
   - grafana_rundeck.yml -> Job do Rundeck
   - playbook.yml -> Playbook para subir um container do Grafana
+  - ansible.cfg -> Exemplo do arquivo de configuração do ansible
+  - hosts -> Exemplo do arquivo de inventário do ansible
 
 ---
 
