@@ -8,7 +8,9 @@
         - curl
         - python3
         - python3-pip
-        
+        - apt-transport-https
+        - python3-setuptools
+
     - name: Instalando pacote Docker
       pip:
         name: docker
@@ -16,8 +18,36 @@
         
     - name: Garantindo imagem
       docker_image:
-        name: "grafana/grafana"
-    
+        name: "{{ item }}" 
+      loop:
+        - "grafana/grafana"
+        - "prom/prometheus"
+        - "prom/node-exporter"
+
+    - name: Subindo container do Node Exporter
+      docker_container:
+        name: node_exporter
+        image: prom/node-exporter
+        command:
+          - '--web.listen-address=0.0.0.0:9100'
+          - '--log.level=info'
+          - '--collector.processes'
+          - '--path.rootfs=/host'
+        detach: yes
+        network_mode: "host"
+        volumes: "/:/host:ro,rslave"
+
+    - name: Subindo container do Prometheus
+      docker_container:
+        name: prometheus
+        image: prom/prometheus
+        detach: yes
+        ports:
+          - '9090:9090'
+        
+    - name: Transferindo arquivo de conf do Prometheus
+      shell: docker cp /home/cafe/prometheus.yml prometheus:/etc/prometheus/prometheus.yml ; docker restart prometheus
+
     - name: Subindo container do grafana
       docker_container:
         name: grafana
