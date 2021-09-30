@@ -29,5 +29,6 @@ scrape_configs:
     scrape_timeout: 2s
     honor_labels: true
 
+    #Grafana Dashboard https://grafana.com/grafana/dashboards/1860
     static_configs:
       - targets: ['172.27.11.100:9100']
