@@ -8,12 +8,13 @@
 
 
 
-## Pasta Review1
-  Contém o arquivos criados na aula.
+
+## Arquivos contidos neste repositório
   - grafana_rundeck.yml -> Job do Rundeck
   - playbook.yml -> Playbook para subir um container do Grafana
   - ansible.cfg -> Exemplo do arquivo de configuração do ansible
   - hosts -> Exemplo do arquivo de inventário do ansible
+  - prometheus.yml -> Exemplo do arquivo de configuração do ansible
 
 ---
 
