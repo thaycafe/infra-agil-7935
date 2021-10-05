@@ -10,6 +10,7 @@
         - python3-pip
         - apt-transport-https
         - python3-setuptools
+        - docker-compose  
 
     - name: Instalando pacote Docker
       pip:
@@ -24,35 +25,88 @@
         - "prom/prometheus"
         - "prom/node-exporter"
 
-    - name: Subindo container do Node Exporter
-      docker_container:
-        name: node_exporter
-        image: prom/node-exporter
-        command:
-          - '--web.listen-address=0.0.0.0:9100'
-          - '--log.level=info'
-          - '--collector.processes'
-          - '--path.rootfs=/host'
-        detach: yes
-        network_mode: "host"
-        volumes: "/:/host:ro,rslave"
+    - name: Subindo serviços via docker-compose
+      docker_service:
+        project_name: rundeck-monitoring
+        definition:
+          version: '3'
+          services:
+            node-exporter:
+              image: prom/node-exporter:latest
+              container_name: node-exporter
+              volumes:
+                - /proc:/host/proc:ro
+                - /sys:/host/sys:ro
+                - /:/rootfs:ro
+              command:
+                - '--path.procfs=/host/proc'
+                - '--path.rootfs=/rootfs'
+                - '--path.sysfs=/host/sys'
+              ports:
+                - 9100:9100
+            prometheus:
+              image: prom/prometheus:latest
+              container_name: prometheus
+              volumes:
+                - /home/cafe/prometheus.yml:/etc/prometheus/prometheus.yml
+              command:
+                - '--config.file=/etc/prometheus/prometheus.yml'
+                - '--storage.tsdb.path=/prometheus'
+                - '--web.console.libraries=/etc/prometheus/console_libraries'
+                - '--web.console.templates=/etc/prometheus/consoles'
+                - '--web.enable-lifecycle'
+              ports:
+                - 9090:9090
+            grafana:
+              image: grafana/grafana:latest
+              container_name: grafana
+              ports:
+                - 3000:3000
+            rundeck-exporter:
+              image: rundeck_exporter
+              container_name: rundeck-exporter
+              environment:
+                - RUNDECK_TOKEN=AR80VGW9H37mdIi4B1lMK6UNIb33mdMo
+                - RUNDECK_URL=http://172.27.11.10:4440
+                - RUNDECK_EXPORTER_HOST=0.0.0.0
+                - RUNDECK_SKIP_SSL=True
+                - RUNDECK_PROJECTS_EXECUTIONS=True
+                - RUNDECK_CPU_STATS=True
+                - RUNDECK_MEMORY_STATS=True
+              ports:
+                - 9620:9620
 
-    - name: Subindo container do Prometheus
-      docker_container:
-        name: prometheus
-        image: prom/prometheus
-        detach: yes
-        ports:
-          - '9090:9090'
-        
-    - name: Transferindo arquivo de conf do Prometheus
-      shell: docker cp /home/cafe/prometheus.yml prometheus:/etc/prometheus/prometheus.yml ; docker restart prometheus
 
-    - name: Subindo container do grafana
-      docker_container:
-        name: grafana
-        image: grafana/grafana
-        detach: yes
-        ports:
-          - "3000:3000"
-        
+#    - name: Subindo container do Node Exporter
+#      docker_container:
+#        name: node_exporter
+#        image: prom/node-exporter
+#        command:
+#          - '--web.listen-address=0.0.0.0:9100'
+#          - '--log.level=info'
+#          - '--collector.processes'
+#          - '--path.rootfs=/host'
+#        detach: yes
+#        network_mode: "host"
+#        volumes: "/:/host:ro,rslave"
+#
+#    - name: Subindo container do Prometheus
+#      docker_container:
+#        name: prometheus
+#        image: prom/prometheus
+#        detach: yes
+#        ports:
+#          - '9090:9090'
+#        
+#    - name: Transferindo arquivo de conf do Prometheus
+#      shell: docker cp /home/cafe/prometheus.yml prometheus:/etc/prometheus/prometheus.yml ; docker restart prometheus
+#
+#    - name: Subindo container do grafana
+#      docker_container:
+#        name: grafana
+#        image: grafana/grafana
+#        detach: yes
+#        ports:
+#          - "3000:3000"
+#        
+#
