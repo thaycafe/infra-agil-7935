@@ -10,7 +10,14 @@
         - python3-pip
         - apt-transport-https
         - python3-setuptools
+        - docker-compose  
         - ntpdate
+
+    - name: Configurando data do servidor
+      block:
+        - command: timedatectl set-timezone America/Sao_Paulo
+
+        - command: ntpdate a.ntp.br
 
     - name: Instalando pacote Docker
       pip:
@@ -25,15 +32,13 @@
         - "prom/prometheus"
         - "prom/node-exporter"
 
-    - name: Clonando repositório
+    - name: Clonando repositório do Rundeck Exporter
       git:
         repo: https://github.com/phsmith/rundeck_exporter.git
         dest: /home/cafe/rundeck/
 
     - name: Buildando imagem do rundeck_exporter
       shell: docker build -t rundeck_exporter /home/cafe/rundeck/
-
-
 
     - name: Subindo stack completa com docker-compose
       docker_service:
@@ -44,7 +49,7 @@
             grafana-storage:
             prometheus-storage:
           services:
-            node_exporter:
+            node-exporter:
               image: prom/node-exporter:latest
               container_name: node-exporter
               volumes:
@@ -58,14 +63,17 @@
               ports:
                 - 9100:9100
             prometheus:
-              image: prom/prometheus:latest      
+              image: prom/prometheus:latest
               container_name: prometheus
               volumes:
-                - prometheus-storage:/prometheus
                 - /home/cafe/prometheus.yml:/etc/prometheus/prometheus.yml
+                - prometheus-storage:/prometheus
               command:
-                - '--storage.tsdb.path=/prometheus'
                 - '--config.file=/etc/prometheus/prometheus.yml'
+                - '--storage.tsdb.path=/prometheus'
+                - '--web.console.libraries=/etc/prometheus/console_libraries'
+                - '--web.console.templates=/etc/prometheus/consoles'
+                - '--web.enable-lifecycle'
               ports:
                 - 9090:9090
             grafana:
