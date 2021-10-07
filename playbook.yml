@@ -10,6 +10,7 @@
         - python3-pip
         - apt-transport-https
         - python3-setuptools
+        - ntpdate
 
     - name: Instalando pacote Docker
       pip:
@@ -24,35 +25,67 @@
         - "prom/prometheus"
         - "prom/node-exporter"
 
-    - name: Subindo container do Node Exporter
-      docker_container:
-        name: node_exporter
-        image: prom/node-exporter
-        command:
-          - '--web.listen-address=0.0.0.0:9100'
-          - '--log.level=info'
-          - '--collector.processes'
-          - '--path.rootfs=/host'
-        detach: yes
-        network_mode: "host"
-        volumes: "/:/host:ro,rslave"
+    - name: Clonando repositório
+      git:
+        repo: https://github.com/phsmith/rundeck_exporter.git
+        dest: /home/cafe/rundeck/
 
-    - name: Subindo container do Prometheus
-      docker_container:
-        name: prometheus
-        image: prom/prometheus
-        detach: yes
-        ports:
-          - '9090:9090'
-        
-    - name: Transferindo arquivo de conf do Prometheus
-      shell: docker cp /home/cafe/prometheus.yml prometheus:/etc/prometheus/prometheus.yml ; docker restart prometheus
+    - name: Buildando imagem do rundeck_exporter
+      shell: docker build -t rundeck_exporter /home/cafe/rundeck/
 
-    - name: Subindo container do grafana
-      docker_container:
-        name: grafana
-        image: grafana/grafana
-        detach: yes
-        ports:
-          - "3000:3000"
-        
+
+
+    - name: Subindo stack completa com docker-compose
+      docker_service:
+        project_name: rundeck-monitoring
+        definition:
+          version: '3'
+          volumes:
+            grafana-storage:
+            prometheus-storage:
+          services:
+            node_exporter:
+              image: prom/node-exporter:latest
+              container_name: node-exporter
+              volumes:
+                - /proc:/host/proc:ro
+                - /sys:/host/sys:ro
+                - /:/rootfs:ro
+              command:
+                - '--path.procfs=/host/proc'
+                - '--path.rootfs=/rootfs'
+                - '--path.sysfs=/host/sys'
+              ports:
+                - 9100:9100
+            prometheus:
+              image: prom/prometheus:latest      
+              container_name: prometheus
+              volumes:
+                - prometheus-storage:/prometheus
+                - /home/cafe/prometheus.yml:/etc/prometheus/prometheus.yml
+              command:
+                - '--storage.tsdb.path=/prometheus'
+                - '--config.file=/etc/prometheus/prometheus.yml'
+              ports:
+                - 9090:9090
+            grafana:
+              image: grafana/grafana
+              container_name: grafana
+              ports:
+                - 3000:3000
+              volumes:
+                - grafana-storage:/var/lib/grafana
+            rundeck-exporter:
+              image: rundeck_exporter
+              container_name: rundeck-exporter
+              environment:
+                - RUNDECK_TOKEN=AR80VGW9H37mdIi4B1lMK6UNIb33mdMo
+                - RUNDECK_URL=http://172.27.11.10:4440
+                - RUNDECK_EXPORTER_HOST=0.0.0.0
+                - RUNDECK_SKIP_SSL=True
+                - RUNDECK_PROJECTS_EXECUTIONS=True
+                - RUNDECK_CPU_STATS=True
+                - RUNDECK_MEMORY_STATS=True
+                - RUNDECK_API_VERSION=40
+              ports:
+                - 9620:9620
